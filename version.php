@@ -25,7 +25,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2012082000;        // The current plugin version (Date: YYYYMMDDXX)
+$plugin->version = 2013082900;        // The current plugin version (Date: YYYYMMDDXX)
 $plugin->requires  = 2011112900;        // Requires this Moodle version
 $plugin->component = 'block_youtube_video'; // Full name of the plugin (used for diagnostics)
 $plugin->cron      = 0;               // Set min time between cron executions

@@ -1,0 +1,18 @@
+#block_youtube_videoobj {
+    cursor:pointer;
+    position:relative
+}
+#block_youtube_videoobj:hover .block_youtube_play_button {
+    display:block;
+    opacity : 0.8;
+}
+.block_youtube_play_button{
+    position : absolute;
+    display:none;
+    top:40%; 
+    width:50px;
+    margin:0 auto;
+    left:0px;
+    right:0px;
+    z-index:100;
+}

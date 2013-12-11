@@ -84,7 +84,11 @@ class block_youtube_video extends block_base {
         $first_video = current($this->videos);
         
         $movieurl = str_replace(array('/watch/', '/watch?v='), '/v/' , $first_video->url);
-
+        
+        // Test YouTube oEmbed
+        $json = file_get_contents('http://www.youtube.com/oembed?url='.$first_video->url.'&format=json');
+        $video_info = json_decode($json);
+        
         $filteropt = new stdClass;
         $filteropt->noclean = true;
         
@@ -99,7 +103,7 @@ class block_youtube_video extends block_base {
         
         $pageid = $DB->get_field("context", "instanceid", array("id"=>$this->instance->parentcontextid));
         
-        $select_playlist = '<select name="playlist" id="playlist" onchange="changeYouTubeVideo(this.options[this.selectedIndex].value, this.options[this.selectedIndex].title)">';
+        $select_playlist = '<select id="block_youtube_playlist">';
         $videodesc_arr = '';
         foreach ($videos_pl as $video) {
             $selected = ($first_video->id == $video->id) ? ' selected="selected"':'';
@@ -108,31 +112,71 @@ class block_youtube_video extends block_base {
         }
         $select_playlist .= '</select>';
         
-        $video_width = 200;
-        $video_height = 150;
-        $this->content->text = '<script language="JavaScript" type="text/javascript">' .
-                     'function changeYouTubeVideo(url, desc) {' .
-                        'url = url.replace("/watch/", "/v/");' .
-                        'url = url.replace("/watch?v=", "/v/");' .
-                        'document.getElementById("videoobj").innerHTML = "' .
-                        '<object width=\''.$video_width.'\' height=\''.$video_height.'\'>' .
-                        '<param name=\'movie\' value=\'" + url + "\'></param>' .
-                        '<param name=\'wmode\' value=\'transparent\'></param>' .
-                        '<embed src=\'" + url + "\' type=\'application/x-shockwave-flash\' wmode=\'transparent\' width=\''.$video_width.'\' height=\''.$video_height.'\'></embed>' .
-                        '</object>";' .
-                        'document.getElementById("videodesc").innerHTML = desc;'.
-                     '}' .
-                     '</script>' .
-                     $select_playlist .
-                     '<div id="videoobj" align="center">' .
-                     '<object width="'.$video_width.'" height="'.$video_height.'">' .
-                     '<param name="movie" value="' . $movieurl . '"></param>' .
-                     '<param name="wmode" value="transparent"></param>' .
-                     '<embed src="' . $movieurl . '" type="application/x-shockwave-flash" wmode="transparent" width="'.$video_width.'" height="'.$video_height.'"></embed>' .
-                     '</object>'.
-                     '</div>'.
-                     '<div id="videodesc">'.format_text($first_video->description, FORMAT_MOODLE, $filteropt).'</div>';
-        
+        $video_width = "100%";
+        $video_height = "100%";
+        $this->content->text = $select_playlist .
+                   '<div id="block_youtube_videoobj" style="text-align:center;">' .
+                   '<div id="block_youtube_video_thumb"><img src="'.$video_info->thumbnail_url.'" width="'.$video_width.'" height="'.$video_height.'" alt="'.$video_info->title.'" /></div>'.
+                   '<div class="block_youtube_play_button"><img src="/blocks/youtube_video/pix/youtube_play.png" /></div>'.
+                   '</div>'.
+                   '<div id="videodesc">'.format_text($first_video->description, FORMAT_MOODLE, $filteropt).'</div>'.
+                   '<script language="JavaScript" type="text/javascript">
+                    YUI().use("io-base", "node-base", "json-parse", function (Y) {
+                        function showVideo(obj) {
+                            var html = obj.html;
+                            html = html.replace("480","240");
+                            html = html.replace("270","180");
+                            html = html.replace("feature=oembed","feature=oembed&autoplay=1");
+                            Y.one("#block_youtube_videoobj").setHTML(html);
+                        }
+                        
+                        function updateThumbnail (obj) {
+                            var thumbnail = obj.thumbnail_url;
+                            var desc = obj.title;
+                            var html = "<div id=\"block_youtube_video_thumb\"><img src=\""+thumbnail+"\" width=\"'.$video_width.'\" height=\"'.$video_height.'\" alt=\""+desc+"\" /></div>";
+                            html = html + "<div class=\"block_youtube_play_button\"><img src=\"/blocks/youtube_video/pix/youtube_play.png\" /></div>";
+                            Y.one("#block_youtube_videoobj").setHTML(html);
+                        }
+                        
+                        Y.one("#block_youtube_videoobj").on("click", function (e) {
+                            var target = Y.one("#block_youtube_videoobj");
+                            var playlist = Y.one("#block_youtube_playlist");
+                            var current_url = playlist.get("value");
+                            
+                            Y.io("/blocks/youtube_video/oembed.php", {
+                                data: "url="+current_url,
+                                on: {
+                                    complete: function (id, response) {
+                                        if (response.status >= 200 && response.status < 300) {
+                                            showVideo(Y.JSON.parse(response.responseText));
+                                        } else {
+                                            showVideo("Failed to load video.");
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                        
+                        Y.one("#block_youtube_playlist").on("change", function (e) {
+                            var thumb_div = Y.one("#block_youtube_video_thumb");
+                            var playlist = Y.one("#block_youtube_playlist");
+                            var current_url = this.get("value");
+                            Y.io("/blocks/youtube_video/oembed.php", {
+                                data: "url="+current_url,
+                                on: {
+                                    complete: function (id, response) {
+                                        if (response.status >= 200 && response.status < 300) {
+                                            updateThumbnail(Y.JSON.parse(response.responseText));
+                                        } else {
+                                            alert("Failed to load video.");
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    });
+                    </script>';
+                    
         return $this->content;
     }
 }

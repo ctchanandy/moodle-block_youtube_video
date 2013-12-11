@@ -23,6 +23,20 @@
  */
 
 $capabilities = array(
+    
+    'block/youtube_video:addinstance' => array(
+        'riskbitmask' => RISK_SPAM | RISK_XSS,
+
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_BLOCK,
+        'archetypes' => array(
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW
+        ),
+
+        'clonepermissionsfrom' => 'moodle/site:manageblocks'
+    ),
+    
     'block/youtube_video:manageanyvideos' => array(
         'riskbitmask' => RISK_SPAM,
         'captype' => 'write',
